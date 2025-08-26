@@ -1,0 +1,139 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+body {
+    background-color: #fafafa;
+    color: #262626;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background-color: white;
+    border-bottom: 1px solid #dbdbdb;
+    padding: 10px 0;
+    z-index: 1000;
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.logo {
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: #262626;
+    text-decoration: none;
+}
+
+.search-box {
+    background: #efefef;
+    border-radius: 8px;
+    padding: 8px 16px;
+    border: none;
+    width: 268px;
+}
+
+.nav-links {
+    display: flex;
+    gap: 22px;
+    align-items: center;
+}
+
+.nav-links a {
+    text-decoration: none;
+    color: #262626;
+    font-size: 1.5rem;
+}
+
+.user-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background-color: #dbdbdb;
+}
+
+main {
+    margin-top: 80px;
+    padding: 20px 0;
+    display: flex;
+    gap: 20px;
+}
+
+.feed {
+    flex: 2;
+}
+
+.sidebar {
+    flex: 1;
+    position: sticky;
+    top: 90px;
+    height: fit-content;
+}
+
+.auth-forms {
+    max-width: 400px;
+    margin: 50px auto;
+    background: white;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+.auth-forms h2 {
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #dbdbdb;
+    border-radius: 4px;
+}
+
+button {
+    background-color: #0095f6;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    width: 100%;
+    font-weight: bold;
+}
+
+.form-footer {
+    margin-top: 15px;
+    text-align: center;
+}
+
+.hidden {
+    display: none;
+}
+
+/* Diğer stiller buraya eklenecek */
