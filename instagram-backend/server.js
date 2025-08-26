@@ -1,5 +1,4 @@
 const express = require('express');
-const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
@@ -29,7 +28,21 @@ if (!fs.existsSync(uploadsDir)) {
 }
 app.use('/uploads', express.static('uploads'));
 
-// MongoDB bağlantısı (MongoDB yoksa basit bellek deposu kullanacağız)
+// Kök endpoint - API durumunu kontrol
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'Instagram Clone API çalışıyor!',
+    endpoints: {
+      auth: ['POST /api/register', 'POST /api/login'],
+      posts: ['GET /api/posts', 'POST /api/posts', 'POST /api/posts/:id/like', 'POST /api/posts/:id/comment'],
+      users: ['GET /api/users', 'GET /api/users/:id', 'POST /api/users/:id/follow'],
+      messages: ['GET /api/messages/:userId'],
+      notifications: ['GET /api/notifications', 'PUT /api/notifications/:id/read']
+    }
+  });
+});
+
+// Basit bellek içi "veritabanı"
 let users = [];
 let posts = [];
 let messages = [];
@@ -65,12 +78,15 @@ const authenticateToken = (req, res, next) => {
   }
 };
 
-// Routes
-
-// Auth routes
+// ===== AUTH ROUTES =====
 app.post('/api/register', async (req, res) => {
   try {
     const { username, email, password } = req.body;
+
+    // Validasyon
+    if (!username || !email || !password) {
+      return res.status(400).json({ message: 'Tüm alanlar zorunludur' });
+    }
 
     // Kullanıcı var mı kontrol et
     const existingUser = users.find(u => u.email === email || u.username === username);
@@ -115,16 +131,14 @@ app.post('/api/register', async (req, res) => {
   }
 });
 
-app.use(cors());
-app.use(express.json());
-
-app.get('/', (req, res) => {
-  res.send('Instagram Backend API'); 
-});
-
 app.post('/api/login', async (req, res) => {
   try {
     const { email, password } = req.body;
+
+    // Validasyon
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Email ve şifre zorunludur' });
+    }
 
     // Kullanıcıyı bul
     const user = users.find(u => u.email === email);
@@ -157,7 +171,7 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-// Post routes
+// ===== POST ROUTES =====
 app.post('/api/posts', authenticateToken, upload.single('image'), async (req, res) => {
   try {
     const { caption } = req.body;
@@ -166,6 +180,7 @@ app.post('/api/posts', authenticateToken, upload.single('image'), async (req, re
     const post = {
       id: Date.now().toString(),
       userId: req.user.id,
+      username: req.user.username,
       image,
       caption,
       likes: [],
@@ -191,7 +206,7 @@ app.get('/api/posts', authenticateToken, async (req, res) => {
       post.userId === req.user.id || req.user.following.includes(post.userId)
     );
     
-    // Tarihe göre sırala
+    // Tarihe göre sırala (yeniden eskiye)
     userPosts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     res.json(userPosts);
@@ -222,6 +237,7 @@ app.post('/api/posts/:id/like', authenticateToken, async (req, res) => {
           userId: post.userId,
           type: 'like',
           fromUser: req.user.id,
+          fromUsername: req.user.username,
           postId: post.id,
           read: false,
           createdAt: new Date()
@@ -252,6 +268,7 @@ app.post('/api/posts/:id/comment', authenticateToken, async (req, res) => {
     post.comments.push({
       id: Date.now().toString(),
       userId: req.user.id,
+      username: req.user.username,
       text,
       createdAt: new Date()
     });
@@ -263,6 +280,7 @@ app.post('/api/posts/:id/comment', authenticateToken, async (req, res) => {
         userId: post.userId,
         type: 'comment',
         fromUser: req.user.id,
+        fromUsername: req.user.username,
         postId: post.id,
         read: false,
         createdAt: new Date()
@@ -280,7 +298,7 @@ app.post('/api/posts/:id/comment', authenticateToken, async (req, res) => {
   }
 });
 
-// User routes
+// ===== USER ROUTES =====
 app.get('/api/users', authenticateToken, async (req, res) => {
   try {
     // Şifreleri göstermeden kullanıcıları döndür
@@ -289,6 +307,7 @@ app.get('/api/users', authenticateToken, async (req, res) => {
       return userWithoutPassword;
     });
     
+    // Mevcut kullanıcıyı listeden çıkar
     res.json(usersWithoutPasswords.filter(u => u.id !== req.user.id));
   } catch (error) {
     res.status(500).json({ message: 'Sunucu hatası', error: error.message });
@@ -336,6 +355,7 @@ app.post('/api/users/:id/follow', authenticateToken, async (req, res) => {
         userId: userToFollow.id,
         type: 'follow',
         fromUser: req.user.id,
+        fromUsername: req.user.username,
         read: false,
         createdAt: new Date()
       };
@@ -355,7 +375,7 @@ app.post('/api/users/:id/follow', authenticateToken, async (req, res) => {
   }
 });
 
-// Message routes
+// ===== MESSAGE ROUTES =====
 app.get('/api/messages/:userId', authenticateToken, async (req, res) => {
   try {
     const userMessages = messages.filter(message =>
@@ -363,13 +383,16 @@ app.get('/api/messages/:userId', authenticateToken, async (req, res) => {
       (message.sender === req.params.userId && message.receiver === req.user.id)
     );
     
+    // Tarihe göre sırala
+    userMessages.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    
     res.json(userMessages);
   } catch (error) {
     res.status(500).json({ message: 'Sunucu hatası', error: error.message });
   }
 });
 
-// Notification routes
+// ===== NOTIFICATION ROUTES =====
 app.get('/api/notifications', authenticateToken, async (req, res) => {
   try {
     const userNotifications = notifications
@@ -396,7 +419,7 @@ app.put('/api/notifications/:id/read', authenticateToken, async (req, res) => {
   }
 });
 
-// Socket.IO bağlantıları
+// ===== SOCKET.IO HANDLERS =====
 io.on('connection', (socket) => {
   console.log('Kullanıcı bağlandı:', socket.id);
 
@@ -430,6 +453,7 @@ io.on('connection', (socket) => {
         userId: receiverId,
         type: 'message',
         fromUser: senderId,
+        fromUsername: users.find(u => u.id === senderId)?.username || 'Unknown',
         read: false,
         createdAt: new Date()
       };
@@ -448,7 +472,19 @@ io.on('connection', (socket) => {
   });
 });
 
+// ===== ERROR HANDLING =====
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ message: 'Bir hata oluştu!' });
+});
+
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({ message: 'Endpoint bulunamadı' });
+});
+
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
-  console.log(`Sunucu ${PORT} portunda çalışıyor`);
+  console.log(`✅ Sunucu http://localhost:${PORT} adresinde çalışıyor`);
+  console.log(`📝 API dokümantasyonu: http://localhost:${PORT}`);
 });

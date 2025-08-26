@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Feed - InstaClone</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-content">
+                <h1>InstaClone</h1>
+                <div class="header-search">
+                    <input type="text" placeholder="Ara..." class="search-input">
+                </div>
+                <div class="header-nav">
+                    <a href="feed.html" class="nav-link active"><i class="fas fa-home"></i></a>
+                    <a href="#" class="nav-link"><i class="fas fa-paper-plane"></i></a>
+                    <a href="#" class="nav-link" id="newPostBtn"><i class="fas fa-plus-square"></i></a>
+                    <a href="#" class="nav-link"><i class="fas fa-compass"></i></a>
+                    <a href="#" class="nav-link"><i class="fas fa-heart"></i></a>
+                    <a href="profile.html" class="nav-link"><i class="fas fa-user"></i></a>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="feed-container">
+                <!-- Hikayeler -->
+                <div class="stories-container">
+                    <div class="story">
+                        <div class="story-avatar">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <span class="story-username">Senin Hikayen</span>
+                    </div>
+                    <div class="story">
+                        <div class="story-avatar">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <span class="story-username">ahmet_yilmaz</span>
+                    </div>
+                    <div class="story">
+                        <div class="story-avatar">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <span class="story-username">ayse_kaya</span>
+                    </div>
+                </div>
+
+                <!-- Yeni Gönderi Formu -->
+                <div class="new-post-container" id="newPostContainer" style="display: none;">
+                    <h3>Yeni Gönderi</h3>
+                    <form id="newPostForm">
+                        <div class="form-group">
+                            <textarea id="postCaption" placeholder="Neler oluyor?" rows="3"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <input type="file" id="postImage" accept="image/*">
+                        </div>
+                        <button type="submit" class="btn btn-primary">Paylaş</button>
+                    </form>
+                </div>
+
+                <!-- Gönderiler -->
+                <div class="posts-container" id="postsContainer">
+                    <!-- Gönderiler JavaScript ile buraya eklenecek -->
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <aside class="sidebar">
+                <div class="profile-card">
+                    <div class="profile-avatar">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div class="profile-info">
+                        <h4 id="sidebarUsername">Kullanıcı Adı</h4>
+                        <p id="sidebarEmail">email@example.com</p>
+                    </div>
+                </div>
+
+                <div class="suggestions">
+                    <h3>Senin için öneriler</h3>
+                    <div class="suggestion-list" id="suggestionList">
+                        <!-- Öneriler JavaScript ile eklenecek -->
+                    </div>
+                </div>
+            </aside>
+        </main>
+    </div>
+
+    <script src="api.js"></script>
+    <script>
+        // Kullanıcı bilgilerini yükle
+        const user = JSON.parse(localStorage.getItem('user'));
+        if (!user || !api.token) {
+            window.location.href = 'login.html';
+        }
+
+        document.getElementById('sidebarUsername').textContent = user.username;
+        document.getElementById('sidebarEmail').textContent = user.email;
+
+        // Yeni gönderi butonu
+        document.getElementById('newPostBtn').addEventListener('click', function(e) {
+            e.preventDefault();
+            const container = document.getElementById('newPostContainer');
+            container.style.display = container.style.display === 'none' ? 'block' : 'none';
+        });
+
+        // Gönderi formu
+        document.getElementById('newPostForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const caption = document.getElementById('postCaption').value;
+            const imageFile = document.getElementById('postImage').files[0];
+            
+            if (!caption && !imageFile) {
+                alert('Lütfen bir metin veya resim ekleyin');
+                return;
+            }
+
+            try {
+                const formData = new FormData();
+                formData.append('caption', caption);
+                if (imageFile) {
+                    formData.append('image', imageFile);
+                }
+
+                const response = await api.createPost(formData);
+                if (response.ok) {
+                    const newPost = await response.json();
+                    addPostToFeed(newPost);
+                    document.getElementById('newPostForm').reset();
+                    document.getElementById('newPostContainer').style.display = 'none';
+                } else {
+                    throw new Error('Gönderi oluşturulamadı');
+                }
+            } catch (error) {
+                console.error('Gönderi hatası:', error);
+                alert('Gönderi paylaşılırken hata oluştu: ' + error.message);
+            }
+        });
+
+        // Gönderileri yükle
+        async function loadPosts() {
+            try {
+                const posts = await api.getPosts();
+                const container = document.getElementById('postsContainer');
+                container.innerHTML = '';
+
+                if (posts.length === 0) {
+                    container.innerHTML = '<p class="no-posts">Henüz gönderi yok. İlk gönderiyi sen paylaş!</p>';
+                    return;
+                }
+
+                posts.forEach(post => {
+                    addPostToFeed(post);
+                });
+            } catch (error) {
+                console.error('Gönderi yükleme hatası:', error);
+            }
+        }
+
+        // Gönderiyi feed'e ekle
+        function addPostToFeed(post) {
+            const container = document.getElementById('postsContainer');
+            const postElement = document.createElement('div');
+            postElement.className = 'post';
+            postElement.innerHTML = `
+                <div class="post-header">
+                    <div class="post-user">
+                        <div class="post-avatar">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <strong>${post.username}</strong>
+                    </div>
+                    <div class="post-menu">
+                        <i class="fas fa-ellipsis-h"></i>
+                    </div>
+                </div>
+                
+                ${post.image ? `
+                <div class="post-image-container">
+                    <img src="http://localhost:5000/uploads/${post.image}" alt="Gönderi" class="post-image">
+                </div>
+                ` : ''}
+                
+                <div class="post-actions">
+                    <div class="action-left">
+                        <button class="action-btn" onclick="likePost('${post.id}')">
+                            <i class="far fa-heart"></i>
+                        </button>
+                        <button class="action-btn" onclick="focusComment('${post.id}')">
+                            <i class="far fa-comment"></i>
+                        </button>
+                        <button class="action-btn">
+                            <i class="far fa-paper-plane"></i>
+                        </button>
+                    </div>
+                    <button class="action-btn">
+                        <i class="far fa-bookmark"></i>
+                    </button>
+                </div>
+                
+                <div class="post-likes">
+                    ${post.likes.length} beğenme
+                </div>
+                
+                <div class="post-caption">
+                    <strong>${post.username}</strong> ${post.caption}
+                </div>
+                
+                <div class="post-comments">
+                    ${post.comments.slice(0, 2).map(comment => `
+                        <div class="comment">
+                            <strong>${comment.username}</strong> ${comment.text}
+                        </div>
+                    `).join('')}
+                    
+                    ${post.comments.length > 2 ? `
+                        <div class="view-comments">
+                            ${post.comments.length - 2} yorum daha gör
+                        </div>
+                    ` : ''}
+                </div>
+                
+                <div class="post-time">
+                    ${new Date(post.createdAt).toLocaleDateString('tr-TR')}
+                </div>
+                
+                <div class="add-comment">
+                    <input type="text" placeholder="Yorum ekle..." class="comment-input" data-post-id="${post.id}">
+                    <button class="post-btn" onclick="addComment('${post.id}')">Paylaş</button>
+                </div>
+            `;
+            
+            container.prepend(postElement);
+        }
+
+        // Beğeni işlemi
+        async function likePost(postId) {
+            try {
+                const updatedPost = await api.likePost(postId);
+                console.log('Beğeni durumu güncellendi:', updatedPost);
+                loadPosts(); // Gönderileri yeniden yükle
+            } catch (error) {
+                console.error('Beğeni hatası:', error);
+            }
+        }
+
+        // Yorum ekleme
+        async function addComment(postId) {
+            const input = document.querySelector(`.comment-input[data-post-id="${postId}"]`);
+            const text = input.value.trim();
+            
+            if (!text) return;
+            
+            try {
+                const updatedPost = await api.commentPost(postId, text);
+                input.value = '';
+                loadPosts(); // Gönderileri yeniden yükle
+            } catch (error) {
+                console.error('Yorum hatası:', error);
+            }
+        }
+
+        // Yorum input'una odaklan
+        function focusComment(postId) {
+            const input = document.querySelector(`.comment-input[data-post-id="${postId}"]`);
+            if (input) {
+                input.focus();
+            }
+        }
+
+        // Sayfa yüklendiğinde
+        document.addEventListener('DOMContentLoaded', function() {
+            loadPosts();
+            loadSuggestions();
+        });
+
+        // Önerileri yükle
+        async function loadSuggestions() {
+            try {
+                const users = await api.getUsers();
+                const container = document.getElementById('suggestionList');
+                
+                users.slice(0, 5).forEach(user => {
+                    const suggestion = document.createElement('div');
+                    suggestion.className = 'suggestion-item';
+                    suggestion.innerHTML = `
+                        <div class="suggestion-user">
+                            <div class="suggestion-avatar">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <div class="suggestion-info">
+                                <strong>${user.username}</strong>
+                                <span>${user.email}</span>
+                            </div>
+                        </div>
+                        <button class="follow-btn" onclick="followUser('${user.id}')">Takip Et</button>
+                    `;
+                    container.appendChild(suggestion);
+                });
+            } catch (error) {
+                console.error('Öneri yükleme hatası:', error);
+            }
+        }
+
+        // Takip etme işlemi
+        async function followUser(userId) {
+            try {
+                const result = await api.followUser(userId);
+                alert(result.following ? 'Takip ediliyor' : 'Takip bırakıldı');
+            } catch (error) {
+                console.error('Takip hatası:', error);
+            }
+        }
+    </script>
+</body>
+</html>

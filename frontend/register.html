@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kayıt Ol - InstaClone</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>InstaClone</h1>
+        </header>
+        
+        <main class="auth-container">
+            <div class="auth-form">
+                <h2>Hesap Oluştur</h2>
+                
+                <form id="registerForm">
+                    <div class="form-group">
+                        <label for="username">Kullanıcı Adı</label>
+                        <input type="text" id="username" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="email">E-posta</label>
+                        <input type="email" id="email" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="password">Şifre</label>
+                        <input type="password" id="password" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="confirmPassword">Şifre Tekrar</label>
+                        <input type="password" id="confirmPassword" required>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">Kayıt Ol</button>
+                </form>
+                
+                <p class="auth-link">
+                    Zaten hesabın var mı? <a href="login.html">Giriş yap</a>
+                </p>
+                
+                <div class="error-message" id="errorMessage"></div>
+            </div>
+        </main>
+    </div>
+
+    <script src="api.js"></script>
+    <script>
+        document.getElementById('registerForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const errorElement = document.getElementById('errorMessage');
+            
+            // Şifre kontrolü
+            if (password !== confirmPassword) {
+                errorElement.textContent = 'Şifreler eşleşmiyor';
+                return;
+            }
+            
+            try {
+                const result = await api.register(username, email, password);
+                
+                if (result && result.token) {
+                    api.setToken(result.token);
+                    localStorage.setItem('user', JSON.stringify(result.user));
+                    window.location.href = 'feed.html';
+                }
+            } catch (error) {
+                errorElement.textContent = error.message || 'Kayıt işlemi başarısız';
+            }
+        });
+
+        // Token kontrolü - zaten giriş yapmışsa feed'e yönlendir
+        if (api.token) {
+            window.location.href = 'feed.html';
+        }
+    </script>
+</body>
+</html>

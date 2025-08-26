@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profil - InstaClone</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-content">
+                <h1>InstaClone</h1>
+                <div class="header-search">
+                    <input type="text" placeholder="Ara..." class="search-input">
+                </div>
+                <div class="header-nav">
+                    <a href="feed.html" class="nav-link"><i class="fas fa-home"></i></a>
+                    <a href="#" class="nav-link"><i class="fas fa-paper-plane"></i></a>
+                    <a href="#" class="nav-link"><i class="fas fa-plus-square"></i></a>
+                    <a href="#" class="nav-link"><i class="fas fa-compass"></i></a>
+                    <a href="#" class="nav-link"><i class="fas fa-heart"></i></a>
+                    <a href="profile.html" class="nav-link active"><i class="fas fa-user"></i></a>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="profile-container">
+            <!-- Profil Header -->
+            <div class="profile-header">
+                <div class="profile-avatar-large">
+                    <i class="fas fa-user"></i>
+                </div>
+                
+                <div class="profile-info">
+                    <div class="profile-username">
+                        <h2 id="profileUsername">Kullanıcı Adı</h2>
+                        <button class="btn btn-outline">Profili Düzenle</button>
+                        <button class="btn btn-outline"><i class="fas fa-cog"></i></button>
+                    </div>
+                    
+                    <div class="profile-stats">
+                        <div class="stat">
+                            <span class="stat-number" id="postCount">0</span>
+                            <span class="stat-label">gönderi</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-number" id="followerCount">0</span>
+                            <span class="stat-label">takipçi</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-number" id="followingCount">0</span>
+                            <span class="stat-label">takip</span>
+                        </div>
+                    </div>
+                    
+                    <div class="profile-bio">
+                        <h4 id="profileName">Tam Ad</h4>
+                        <p id="profileBio">Profil bio buraya gelecek</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profil Navigasyon -->
+            <div class="profile-nav">
+                <button class="profile-nav-btn active">
+                    <i class="fas fa-grid"></i>
+                    <span>GÖNDERİLER</span>
+                </button>
+                <button class="profile-nav-btn">
+                    <i class="fas fa-tv"></i>
+                    <span>REELS</span>
+                </button>
+                <button class="profile-nav-btn">
+                    <i class="fas fa-bookmark"></i>
+                    <span>KAYDEDİLENLER</span>
+                </button>
+                <button class="profile-nav-btn">
+                    <i class="fas fa-user-tag"></i>
+                    <span>ETİKETLENENLER</span>
+                </button>
+            </div>
+
+            <!-- Gönderiler Grid -->
+            <div class="profile-posts-grid" id="profilePostsGrid">
+                <!-- Kullanıcı gönderileri buraya eklenecek -->
+            </div>
+
+            <!-- Gönderi yoksa -->
+            <div class="no-posts" id="noPosts" style="display: none;">
+                <div class="no-posts-content">
+                    <i class="fas fa-camera"></i>
+                    <h3>Paylaşımlar</h3>
+                    <p>Fotoğraf veya video paylaştığında, paylaşımların burada görünecek.</p>
+                    <a href="feed.html" class="btn btn-primary">İlk Gönderiyi Paylaş</a>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="api.js"></script>
+    <script>
+        // Kullanıcı bilgilerini yükle
+        const user = JSON.parse(localStorage.getItem('user'));
+        if (!user || !api.token) {
+            window.location.href = 'login.html';
+        }
+
+        // Profil bilgilerini doldur
+        document.getElementById('profileUsername').textContent = user.username;
+        document.getElementById('profileName').textContent = user.username;
+        document.getElementById('profileBio').textContent = user.bio || 'Henüz bir bio eklenmemiş';
+
+        // Profil verilerini yükle
+        async function loadProfileData() {
+            try {
+                // Kullanıcının gönderilerini getir
+                const allPosts = await api.getPosts();
+                const userPosts = allPosts.filter(post => post.userId === user.id);
+                
+                // İstatistikleri güncelle
+                document.getElementById('postCount').textContent = userPosts.length;
+                document.getElementById('followerCount').textContent = user.followers ? user.followers.length : 0;
+                document.getElementById('followingCount').textContent = user.following ? user.following.length : 0;
+                
+                // Gönderileri göster
+                const grid = document.getElementById('profilePostsGrid');
+                const noPosts = document.getElementById('noPosts');
+                
+                if (userPosts.length === 0) {
+                    grid.style.display = 'none';
+                    noPosts.style.display = 'block';
+                    return;
+                }
+                
+                grid.innerHTML = '';
+                userPosts.forEach(post => {
+                    const postElement = document.createElement('div');
+                    postElement.className = 'profile-post';
+                    
+                    if (post.image) {
+                        postElement.innerHTML = `
+                            <img src="http://localhost:5000/uploads/${post.image}" alt="Gönderi">
+                            <div class="post-overlay">
+                                <span><i class="fas fa-heart"></i> ${post.likes.length}</span>
+                                <span><i class="fas fa-comment"></i> ${post.comments.length}</span>
+                            </div>
+                        `;
+                    } else {
+                        postElement.innerHTML = `
+                            <div class="text-post">
+                                <p>${post.caption}</p>
+                                <div class="post-stats">
+                                    <span><i class="fas fa-heart"></i> ${post.likes.length}</span>
+                                    <span><i class="fas fa-comment"></i> ${post.comments.length}</span>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
+                    grid.appendChild(postElement);
+                });
+                
+            } catch (error) {
+                console.error('Profil verileri yüklenirken hata:', error);
+            }
+        }
+
+        // Sayfa yüklendiğinde
+        document.addEventListener('DOMContentLoaded', function() {
+            loadProfileData();
+        });
+    </script>
+</body>
+</html>
